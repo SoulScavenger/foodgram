@@ -24,4 +24,3 @@ MIN_COCKING_TIME = 1
 
 # Общие константы
 MAX_VIEW_LENGTH = 30
-DIR = '../data/'

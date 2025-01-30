@@ -1,9 +1,7 @@
 import json
-import os
 
 from django.core.management.base import BaseCommand
 
-from core.constants import DIR
 from recipes.models import Ingredient
 
 from foodgram.settings import JSON_FILES_DIR
