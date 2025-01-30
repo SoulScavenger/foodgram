@@ -13,6 +13,9 @@
 ![Gunicorn](https://img.shields.io/badge/Gunicorn-03fcf?style=for-the-badge&logo=Gunicorn&logoColor=white)
 ![React](https://img.shields.io/badge/React-03ebfc?style=for-the-badge&logo=React&logoColor=white)
 
+# Админ: 
+## Логин: admin@admin.ru Пароль: admin
+
 
 ### Как запустить проект:
 #### Клонировать репозиторий и перейти в него в командной строке:
