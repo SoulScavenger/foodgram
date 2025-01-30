@@ -19,7 +19,7 @@ class CustomUserAdmin(admin.ModelAdmin):
 
     list_editable = ('is_staff',)
     list_filter = ('username', 'email')
-    search_fields = ('username',)
+    search_fields = ('username', 'email')
 
 
 @admin.register(Subscribe)
