@@ -6,17 +6,15 @@ from django.core.management.base import BaseCommand
 from core.constants import DIR
 from recipes.models import Ingredient
 
+from foodgram.settings import JSON_FILES_DIR
+
 
 class Command(BaseCommand):
     """Загрузка ингридиентов в БД."""
 
     def handle(self, *args, **options):
-        os.chdir(DIR)
-        path_to_csv_folder = os.getcwd()
-        path_to_file = os.path.join(path_to_csv_folder, 'ingredients.json')
-        print(path_to_file)
-
-        with open(path_to_file, 'r', encoding='UTF-8') as file:
+        path_to_json_file = f'{JSON_FILES_DIR}/ingredients.json'
+        with open(path_to_json_file, 'r', encoding='UTF-8') as file:
             ingredients = json.load(file)
 
         for ingredient in ingredients:
