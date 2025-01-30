@@ -113,6 +113,12 @@ class Recipe(models.Model):
         verbose_name='Дата публикации'
     )
 
+    short_link = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Короткая ссылка'
+    )
+
     class Meta:
         ordering = ('-created_at',)
         verbose_name = 'Рецепт'

@@ -12,10 +12,10 @@ app_name = 'api'
 
 router_v1 = DefaultRouter()
 
-router_v1.register('tags', TagViewSet, basename='Tag')
-router_v1.register('ingredients', IngredientViewSet, basename='Ingredient')
-router_v1.register('recipes', RecipeViewSet, basename='Recipe')
-router_v1.register('users', CustomUserViewSet, basename='CustomUser')
+router_v1.register('tags', TagViewSet, basename='tag')
+router_v1.register('ingredients', IngredientViewSet, basename='ingredient')
+router_v1.register('recipes', RecipeViewSet, basename='recipe')
+router_v1.register('users', CustomUserViewSet, basename='customuser')
 
 api_v1_urls = [
     path('', include(router_v1.urls)),

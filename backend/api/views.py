@@ -1,6 +1,8 @@
+import uuid
 from django.db.models import Sum
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from djoser.views import UserViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, viewsets, status
@@ -34,6 +36,7 @@ from recipes.models import (
     Tag
 )
 from users.models import CustomUser, Subscribe
+from core.constants import SHORT_LINK_MAX_POSTFIX, URL
 
 
 # Вьюсеты пользователя.
@@ -182,14 +185,23 @@ class RecipeViewSet(
         return GetRecipeSerializer
 
     @action(
-        detail=False,
-        methods=['get'],
-        url_path=r'(?P<id>\d+)/get-link',
-        url_name='get-link',
+        methods=['GET'],
+        url_path='get-link',
+        detail=True
     )
-    def get_link(self, request, id):
-        """Добавление и удаление рецепта из избранного."""
-        return Response("link")
+    def get_short_link(self, request, pk):
+        recipe = get_object_or_404(Recipe, id=pk)
+        if recipe.short_link:
+            return Response(
+                {"short-link": recipe.short_link},
+                status=status.HTTP_200_OK
+            )
+        recipe.short_link = self.generate_short_link()
+        recipe.save()
+        return Response(
+            {"short-link": recipe.short_link},
+            status=status.HTTP_200_OK
+        )
 
     @action(
         detail=False,
@@ -269,3 +281,29 @@ class RecipeViewSet(
             'attachment; filename="shopping_cart.txt"'
         )
         return response
+
+    def generate_short_link(self):
+        """Генератор короткой ссылки."""
+        while True:
+            short_link = (
+                URL + str(
+                    uuid.uuid4()
+                ).replace('-', '')[:SHORT_LINK_MAX_POSTFIX] + '/'
+            )
+            has_short_link = Recipe.objects.filter(
+                short_link=short_link
+            ).exists()
+            if not has_short_link:
+                break
+        return short_link
+
+
+def redirect_to_recipe_detail(request, short_link):
+    """Редирект с короткой ссылки."""
+
+    link = request.build_absolute_uri()
+    recipe = get_object_or_404(Recipe, short_link=link)
+    return redirect(reverse(
+        'api:recipe-detail',
+        kwargs={'pk': recipe.id})
+    )
