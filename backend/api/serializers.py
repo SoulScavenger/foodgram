@@ -441,17 +441,6 @@ class ShoppingCartRecipeSerializer(serializers.ModelSerializer):
             )
         return data
 
-    # def create(self, validated_data):
-    #     favorite_recipe, status = ShoppingCartRecipe.objects.get_or_create(
-    #         **validated_data
-    #     )
-    #     if not status:
-    #         raise serializers.ValidationError(
-    #             f'Рецепт \'{validated_data["recipe"]}\''
-    #             'уже добавлен в корзину.'
-    #         )
-    #     return favorite_recipe
-
     def to_representation(self, instance):
         return GetShortRecipeSerializer(
             instance.recipe,
