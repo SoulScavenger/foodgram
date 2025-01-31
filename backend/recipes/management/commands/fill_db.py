@@ -3,7 +3,7 @@ import json
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from recipes.models import Ingredient
+from recipes.models import Ingredient, Tag
 
 
 class Command(BaseCommand):
@@ -27,6 +27,6 @@ class Command(BaseCommand):
 
         for ingredient in ingredients:
             try:
-                Ingredient.objects.get_or_create(**ingredient)
+                Tag.objects.get_or_create(**ingredient)
             except Exception as error:
                 print(f"Что-то пошло не так. {error}")
