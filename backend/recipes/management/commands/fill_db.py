@@ -11,7 +11,7 @@ class Command(BaseCommand):
     """Загрузка ингридиентов в БД."""
 
     def handle(self, *args, **options):
-        os.chdir(DIR)
+        # os.chdir(DIR)
         path_to_ingr = os.getcwd()
         path_to_ingredients = os.path.join(path_to_ingr, 'ingredients.json')
         # path_to_tags = os.path.join(path_to_ingr, 'tags.json')
