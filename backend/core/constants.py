@@ -26,3 +26,4 @@ MIN_COCKING_TIME = 1
 MAX_VIEW_LENGTH = 30
 URL = 'http://soulscavengerkitty.ddns.net/s/'
 SHORT_LINK_MAX_POSTFIX = 10
+DIR = '../data/'
