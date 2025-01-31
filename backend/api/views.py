@@ -293,8 +293,6 @@ class RecipeViewSet(
         )
         return response
 
-
-
     def generate_short_link(self):
         """Генератор короткой ссылки."""
         while True:

@@ -1,11 +1,10 @@
 from django_filters.rest_framework import (
     BooleanFilter,
-    CharFilter,
     FilterSet,
     AllValuesMultipleFilter
 )
 
-from recipes.models import Recipe, Tag
+from recipes.models import Recipe
 
 
 class RecipeFilterSet(FilterSet):
