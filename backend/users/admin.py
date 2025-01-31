@@ -1,10 +1,11 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from users.models import CustomUser, Subscribe
+from users.models import User, Subscribe
 
 
-@admin.register(CustomUser)
-class CustomUserAdmin(admin.ModelAdmin):
+@admin.register(User)
+class CustomUserAdmin(BaseUserAdmin):
     """Админка раздела пользователей."""
 
     list_display = (
@@ -34,7 +35,7 @@ class SubscribeAdmin(admin.ModelAdmin):
 
     list_editable = ('user', 'author')
     list_filter = ('user', 'author')
-    search_fields = ('user', 'author')
+    search_fields = ('user__username', 'author__username')
 
 
 admin.site.empty_value_display = 'Не задано'

@@ -13,10 +13,9 @@
 ![Gunicorn](https://img.shields.io/badge/Gunicorn-03fcf?style=for-the-badge&logo=Gunicorn&logoColor=white)
 ![React](https://img.shields.io/badge/React-03ebfc?style=for-the-badge&logo=React&logoColor=white)
 
-# Адрес сайта:
-## https://soulscavengerkitty.ddns.net/
-# Учетка админа: 
-## Логин: admin@admin.ru Пароль: admin
+
+[Пример сайта](https://soulscavengerkitty.ddns.net/)
+
 
 
 ### Как запустить проект:

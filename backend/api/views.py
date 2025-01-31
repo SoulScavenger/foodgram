@@ -1,15 +1,14 @@
 import uuid
+
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse
-from djoser.views import UserViewSet
+from djoser.views import UserViewSet as DjoserViewSer
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
 
 from api.filters import RecipeFilterSet
 from api.pagination import CustomPagination
@@ -17,16 +16,17 @@ from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     AvatarSerializer,
     ShoppingCartRecipeSerializer,
-    CreateCustomUserSerializer,
+    CreateUserSerializer,
     CreateRecipeSerializer,
     CreateSubscribeSerializer,
     FavoriteRecipeSerializer,
-    GetCustomUserSerializer,
+    GetUserSerializer,
     GetRecipeSerializer,
     GetSubscribeSerializer,
     IngredientSerializer,
     TagSerializer,
 )
+from core.constants import SHORT_LINK_MAX_POSTFIX, URL
 from recipes.models import (
     FavoriteRecipe,
     Ingredient,
@@ -35,16 +35,15 @@ from recipes.models import (
     ShoppingCartRecipe,
     Tag
 )
-from users.models import CustomUser, Subscribe
-from core.constants import SHORT_LINK_MAX_POSTFIX, URL
+from users.models import User, Subscribe
 
 
 # Вьюсеты пользователя.
-class CustomUserViewSet(UserViewSet):
+class UserViewSet(DjoserViewSer):
     """Вьюсет создания кастомного пользователя."""
 
-    queryset = CustomUser.objects.all()
-    serializer_class = CreateCustomUserSerializer
+    queryset = User.objects.all()
+    serializer_class = CreateUserSerializer
     pagination_class = CustomPagination
 
     def get_serializer_class(self):
@@ -53,7 +52,7 @@ class CustomUserViewSet(UserViewSet):
             or self.action == 'retrieve'
             or self.action == 'me'
         ):
-            return GetCustomUserSerializer
+            return GetUserSerializer
         return super().get_serializer_class()
 
     @action(
@@ -65,8 +64,7 @@ class CustomUserViewSet(UserViewSet):
     )
     def me(self, request):
         """Просмотр профиля пользователя."""
-        user = get_object_or_404(CustomUser, username=request.user.username)
-        serializer = GetCustomUserSerializer(user)
+        serializer = GetUserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(
@@ -98,7 +96,7 @@ class CustomUserViewSet(UserViewSet):
     def subscribe(self, request, id):
         """Управление подпиской."""
         user = self.request.user
-        author = get_object_or_404(CustomUser, id=id)
+        author = get_object_or_404(User, id=id)
         if self.request.method == 'POST':
             serializer = CreateSubscribeSerializer(
                 data={'user': user.id, 'author': author.id},
@@ -129,7 +127,7 @@ class CustomUserViewSet(UserViewSet):
     def get_subscriptions(self, request):
         """Получения списка подписок."""
         user = self.request.user
-        subscribes = CustomUser.objects.filter(author__user=user)
+        subscribes = User.objects.filter(author__user=user)
         paginator = CustomPagination()
         result_pages = paginator.paginate_queryset(
             queryset=subscribes, request=request
@@ -191,13 +189,9 @@ class RecipeViewSet(
     )
     def get_short_link(self, request, pk):
         recipe = get_object_or_404(Recipe, id=pk)
-        if recipe.short_link:
-            return Response(
-                {"short-link": recipe.short_link},
-                status=status.HTTP_200_OK
-            )
-        recipe.short_link = self.generate_short_link()
-        recipe.save()
+        if not recipe.short_link:
+            recipe.short_link = self.generate_short_link()
+            recipe.save()
         return Response(
             {"short-link": recipe.short_link},
             status=status.HTTP_200_OK
@@ -212,23 +206,13 @@ class RecipeViewSet(
     )
     def add_recipe_to_favorite(self, request, id):
         """Добавление и удаление рецепта из избранного."""
-        recipe = get_object_or_404(Recipe, id=id)
-        user = self.request.user
-        if self.request.method == 'POST':
-            serializer = FavoriteRecipeSerializer(
-                data={'user': user.id, 'recipe': recipe.id},
-                context={'request': request}
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        recipe = FavoriteRecipe.objects.filter(
-            user=user, recipe=recipe
+        return self.add_recipe_to_favorite_or_cart(
+            serializer=FavoriteRecipeSerializer,
+            model=Recipe,
+            rel_model=FavoriteRecipe,
+            id=id,
+            request=request
         )
-        if len(recipe) == 0:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        recipe.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=False,
@@ -239,20 +223,37 @@ class RecipeViewSet(
     )
     def add_recipe_to_shopping_cart(self, request, id):
         """Добавление и удаление рецепта в корзину покупок."""
-        recipe = get_object_or_404(Recipe, id=id)
+
+        return self.add_recipe_to_favorite_or_cart(
+            serializer=ShoppingCartRecipeSerializer,
+            model=Recipe,
+            rel_model=ShoppingCartRecipe,
+            id=id,
+            request=request
+        )
+
+    def add_recipe_to_favorite_or_cart(
+            self,
+            serializer,
+            model,
+            id,
+            request,
+            rel_model
+    ):
+        recipe = get_object_or_404(model, id=id)
         user = self.request.user
         if self.request.method == 'POST':
-            serializer = ShoppingCartRecipeSerializer(
+            serializer = serializer(
                 data={'user': user.id, 'recipe': recipe.id},
                 context={'request': request}
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        recipe = ShoppingCartRecipe.objects.filter(
+        recipe = rel_model.objects.filter(
             user=user, recipe=recipe
         )
-        if len(recipe) == 0:
+        if not recipe:
             return Response(status=status.HTTP_400_BAD_REQUEST)
         recipe.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -266,21 +267,33 @@ class RecipeViewSet(
     def download_shopping_cart(self, request):
         """Отправка файла со списком покупок."""
         ingredients = RecipeIngredient.objects.filter(
-            recipe__cart_recipe__user=request.user
+            recipe__cart_recipes__user=request.user
         ).values(
             'ingredient__name', 'ingredient__measurement_unit'
-        ).annotate(ingredient_amount=Sum('amount'))
+        ).annotate(
+            ingredient_amount=Sum('amount')
+        ).order_by('ingredient__name')
+        shopping_list = self.prepare_ingredients_for_download(ingredients)
+        return self.download_ingredients(shopping_list)
+
+    def prepare_ingredients_for_download(self, ingredients):
         shopping_list = ['Список покупок:\n']
         for ingredient in ingredients:
             name = ingredient['ingredient__name']
             unit = ingredient['ingredient__measurement_unit']
             amount = ingredient['ingredient_amount']
             shopping_list.append(f'\n{name} - {amount}, {unit}')
+
+        return shopping_list
+
+    def download_ingredients(self, shopping_list):
         response = HttpResponse(shopping_list, content_type='text/plain')
         response['Content-Disposition'] = (
-            'attachment; filename="shopping_cart.txt"'
+            'attachment; filename="shopping_list.txt"'
         )
         return response
+
+
 
     def generate_short_link(self):
         """Генератор короткой ссылки."""
@@ -303,7 +316,7 @@ def redirect_to_recipe_detail(request, short_link):
 
     link = request.build_absolute_uri()
     recipe = get_object_or_404(Recipe, short_link=link)
-    return redirect(reverse(
+    return redirect(
         'api:recipe-detail',
-        kwargs={'pk': recipe.id})
+        pk=recipe.id
     )

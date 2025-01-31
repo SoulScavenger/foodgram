@@ -11,7 +11,7 @@ from core.constants import (
 )
 
 
-class CustomUser(AbstractUser):
+class User(AbstractUser):
     """Кастомная модель пользователя."""
 
     email = models.EmailField(
@@ -50,7 +50,7 @@ class CustomUser(AbstractUser):
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
-        ordering = ('-id',)
+        ordering = ('username',)
 
     def __str__(self):
         return self.username
@@ -60,21 +60,21 @@ class Subscribe(models.Model):
     """Модель подписки. """
 
     user = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         related_name='followings',
         verbose_name='Пользователь'
     )
 
     author = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         related_name='author',
         verbose_name='Подписан на'
     )
 
     class Meta:
-        ordering = ('-id',)
+        ordering = ('user__username',)
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
         constraints = [
@@ -90,6 +90,6 @@ class Subscribe(models.Model):
 
     def __str__(self):
         return (
-            f'Пользователь: {self.follower} '
+            f'Пользователь: {self.user} '
             f'Подписан на: {self.author} '
         )

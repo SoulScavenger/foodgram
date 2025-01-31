@@ -24,20 +24,20 @@ class BaseFavoriteShopping(admin.ModelAdmin):
     search_fields = ('user__username', 'recipe')
 
 
-class BaseInline(admin.StackedInline):
+class BaseRecipeIngredientTagInline(admin.StackedInline):
     """Базовый класс для строчного представления."""
     extra = 0
     min_num = 1
 
 
-class RecipeIngredientInline(BaseInline):
-    """Строчное представление Ингредиента в Рецепте"""
+class RecipeIngredientInline(BaseRecipeIngredientTagInline):
+    """Строчное представление Ингредиента в Рецепте."""
 
     model = RecipeIngredient
 
 
-class RecipeTagInline(BaseInline):
-    """Строчное представление Ингредиента в Рецепте"""
+class RecipeTagInline(BaseRecipeIngredientTagInline):
+    """Строчное представление Тега в Рецепте."""
 
     model = RecipeTag
 
@@ -65,27 +65,35 @@ class RecipeAdmin(admin.ModelAdmin):
     filter_horizontal = ('tags',)
     inlines = [RecipeIngredientInline, RecipeTagInline]
 
+    @admin.display(
+        description='Автор,'
+    )
     def get_username(self, object):
         """Автор рецепта."""
         return object.author.username
-    get_username.short_description = 'Автор'
 
+    @admin.display(
+        description='Ингридиенты,'
+    )
     def get_ingredients(self, object):
         """Список тегов."""
         return '\n'.join(
             obj.ingredient.name for obj in object.recipe_ingredients.all()
         )
-    get_ingredients.short_description = 'Ингридиенты'
 
+    @admin.display(
+        description='Теги'
+    )
     def get_tags(self, object):
         """Список тегов."""
         return '\n'.join(obj.tag.name for obj in object.recipe_tags.all())
-    get_tags.short_description = 'Теги'
 
+    @admin.display(
+        description='Количество добавлений в избранное'
+    )
     def added_to_favorite(self, object):
         """Популярность рецепта."""
         return object.favorite_recipe.count()
-    added_to_favorite.short_description = 'Количество добавлений в избранное'
 
 
 @admin.register(Tag)
@@ -109,8 +117,6 @@ class TagAdmin(admin.ModelAdmin):
         'name',
     )
 
-    list_display_links = ('id', )
-
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
@@ -129,7 +135,6 @@ class IngredientAdmin(admin.ModelAdmin):
 
     search_fields = ('name',)
     list_filter = ('name',)
-    list_display_links = ('id', )
 
 
 @admin.register(RecipeIngredient)
@@ -143,7 +148,7 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
     )
 
     list_filter = ('recipe', 'ingredient')
-    search_fields = ('recipe', 'ingredient')
+    search_fields = ('recipe__name', 'ingredient__name')
     list_display_links = ('recipe', 'ingredient')
 
 
@@ -156,7 +161,7 @@ class RecipeTagAdmin(admin.ModelAdmin):
     )
 
     list_filter = ('recipe', 'tag')
-    search_fields = ('recipe', 'tag')
+    search_fields = ('recipe__name', 'tag__name')
     list_display_links = ('recipe', 'tag')
 
 

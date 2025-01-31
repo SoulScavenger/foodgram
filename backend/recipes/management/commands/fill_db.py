@@ -1,8 +1,10 @@
 import json
+from time import sleep
 
-from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
+from tqdm import tqdm
 
+from foodgram.settings import PATH_TO_INGREDIENTS, PATH_TO_TAGS
 from recipes.models import Ingredient, Tag
 
 
@@ -10,23 +12,27 @@ class Command(BaseCommand):
     """Загрузка ингридиентов в БД."""
 
     def handle(self, *args, **options):
-        path_to_ingredients = settings.BASE_DIR / 'data/ingredients.json'
-        path_to_tags = settings.BASE_DIR / 'data/tags.json'
 
-        with open(path_to_ingredients, 'r', encoding='UTF-8') as file:
+        with open(PATH_TO_INGREDIENTS, 'r', encoding='UTF-8') as file:
             ingredients = json.load(file)
 
-        for ingredient in ingredients:
-            try:
-                Ingredient.objects.get_or_create(**ingredient)
-            except Exception as error:
-                print(f"Что-то пошло не так. {error}")
+            for ingredient in tqdm(ingredients):
+                try:
+                    Ingredient.objects.get_or_create(**ingredient)
+                except CommandError as error:
+                    raise CommandError(
+                        f'Ошибка при добавление ингридиента: {ingredient}.'
+                        f' Описание: {error}'
+                    )
 
-        with open(path_to_tags, 'r', encoding='UTF-8') as file:
-            ingredients = json.load(file)
+        with open(PATH_TO_TAGS, 'r', encoding='UTF-8') as file:
+            tags = json.load(file)
 
-        for ingredient in ingredients:
-            try:
-                Tag.objects.get_or_create(**ingredient)
-            except Exception as error:
-                print(f"Что-то пошло не так. {error}")
+            for tag in tqdm(tags):
+                try:
+                    Tag.objects.get_or_create(**tag)
+                except CommandError as error:
+                    raise CommandError(
+                        f'Ошибка при добавление тега: {tag}.'
+                        f' Описание: {error}'
+                    )
