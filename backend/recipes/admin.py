@@ -93,7 +93,7 @@ class RecipeAdmin(admin.ModelAdmin):
     )
     def added_to_favorite(self, object):
         """Популярность рецепта."""
-        return object.favorite_recipe.count()
+        return object.favorite_recipes.count()
 
 
 @admin.register(Tag)
