@@ -14,7 +14,12 @@
 ![React](https://img.shields.io/badge/React-03ebfc?style=for-the-badge&logo=React&logoColor=white)
 
 
+### Пример сайта
 [Пример сайта](https://soulscavengerkitty.ddns.net/)
+
+### API документация
+
+[API документация](https://soulscavengerkitty.ddns.net/api/docs/)
 
 
 
