@@ -266,14 +266,14 @@ class GetRecipeSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return (
             request and request.user.is_authenticated
-            and request.user.favorite_recipes.exists()
+            and request.user.favorite_recipes.filter(recipe=obj).exists()
         )
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         return (
             request and request.user.is_authenticated
-            and request.user.cart_recipes.exists()
+            and request.user.cart_recipes.filter(recipe=obj).exists()
         )
 
 
@@ -396,8 +396,7 @@ class FavoriteRecipeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return GetShortRecipeSerializer(
-            instance.recipe,
-            context={'request': self.context.get('request')}
+            instance.recipe
         ).data
 
 
