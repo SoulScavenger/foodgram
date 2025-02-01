@@ -1,10 +1,21 @@
 from django_filters.rest_framework import (
     BooleanFilter,
+    CharFilter,
     FilterSet,
     AllValuesMultipleFilter
 )
 
-from recipes.models import Recipe
+from recipes.models import Ingredient, Recipe
+
+
+class IngredientFilterSet(FilterSet):
+    """Фильтр для Ингредиентов"""
+
+    name = CharFilter(lookup_expr='istartswith')
+
+    class Meta:
+        model = Ingredient
+        fields = ('name',)
 
 
 class RecipeFilterSet(FilterSet):
