@@ -5,9 +5,9 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from djoser.views import UserViewSet as DjoserViewSer
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, viewsets, status
+from rest_framework import filters, viewsets, status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from rest_framework.response import Response
 
 from api.filters import RecipeFilterSet
@@ -64,7 +64,10 @@ class UserViewSet(DjoserViewSer):
     )
     def me(self, request):
         """Просмотр профиля пользователя."""
-        serializer = GetUserSerializer(request.user)
+        serializer = GetUserSerializer(
+            request.user,
+            context={'request': request}
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(
@@ -140,22 +143,20 @@ class UserViewSet(DjoserViewSer):
 
 # Вьюсеты рецепта.
 class TagViewSet(
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
-    viewsets.GenericViewSet,
+    viewsets.ReadOnlyModelViewSet
 ):
     """Вьюсет Тега."""
+
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
 
 
 class IngredientViewSet(
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
-    viewsets.GenericViewSet,
+    viewsets.ReadOnlyModelViewSet
 ):
     """Вьюсет Ингридиента."""
+
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = (DjangoFilterBackend, filters.SearchFilter)
@@ -168,6 +169,7 @@ class RecipeViewSet(
     viewsets.ModelViewSet,
 ):
     """Вьюсет Рецепта."""
+
     queryset = Recipe.objects.all()
     permission_classes = (IsAuthorOrReadOnly,)
     pagination_class = CustomPagination
@@ -178,9 +180,9 @@ class RecipeViewSet(
         serializer.save(author=self.request.user)
 
     def get_serializer_class(self):
-        if self.request.method == 'POST' or self.request.method == 'PATCH':
-            return CreateRecipeSerializer
-        return GetRecipeSerializer
+        if self.request.method in SAFE_METHODS:
+            return GetRecipeSerializer
+        return CreateRecipeSerializer
 
     @action(
         methods=['GET'],

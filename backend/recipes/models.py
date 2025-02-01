@@ -55,7 +55,6 @@ class Ingredient(models.Model):
         ordering = ('name',)
         verbose_name = 'Ингридиент'
         verbose_name_plural = 'Ингридиенты'
-        default_related_name = 'ingredients'
         constraints = [
             models.UniqueConstraint(
                 fields=['name', 'measurement_unit'],
@@ -138,6 +137,7 @@ class RecipeTag(models.Model):
     )
 
     class Meta:
+        ordering = ('recipe',)
         default_related_name = 'recipe_tags'
         constraints = [
             models.UniqueConstraint(
@@ -149,7 +149,9 @@ class RecipeTag(models.Model):
         verbose_name_plural = 'Связи Рецепты/Теги'
 
     def __str__(self):
-        return self.tag.name[:MAX_VIEW_LENGTH]
+        return (
+            f'Тег {self.tag.name[:MAX_VIEW_LENGTH]}'
+            f'для рецепта {self.recipe.name[:MAX_VIEW_LENGTH]}')
 
 
 class RecipeIngredient(models.Model):
@@ -173,6 +175,7 @@ class RecipeIngredient(models.Model):
     )
 
     class Meta:
+        ordering = ('recipe',)
         default_related_name = 'recipe_ingredients'
         constraints = [
             models.UniqueConstraint(
@@ -182,6 +185,11 @@ class RecipeIngredient(models.Model):
         ]
         verbose_name = 'Связь Рецепт/Ингридиент'
         verbose_name_plural = 'Связи Рецепты/Ингридиенты'
+
+    def __str__(self):
+        return (
+            f'Ингридиент {self.ingredient.name[:MAX_VIEW_LENGTH]}'
+            f'для рецепта {self.recipe.name[:MAX_VIEW_LENGTH]}')
 
 
 class BaseFavoriteShoppingCart(models.Model):
@@ -200,13 +208,13 @@ class BaseFavoriteShoppingCart(models.Model):
 
     class Meta:
         abstract = True
+        ordering = ('user',)
 
 
 class FavoriteRecipe(BaseFavoriteShoppingCart):
     """Модель избранных рецептов."""
 
-    class Meta:
-        ordering = ('user',)
+    class Meta(BaseFavoriteShoppingCart.Meta):
         verbose_name = 'Избранный рецепт'
         verbose_name_plural = 'Избранные рецепты'
         default_related_name = 'favorite_recipes'
@@ -224,8 +232,7 @@ class FavoriteRecipe(BaseFavoriteShoppingCart):
 class ShoppingCartRecipe(BaseFavoriteShoppingCart):
     """Модель избранных рецептов."""
 
-    class Meta:
-        ordering = ('user',)
+    class Meta(BaseFavoriteShoppingCart.Meta):
         verbose_name = 'Корзина'
         verbose_name_plural = 'Корзина'
         default_related_name = 'cart_recipes'

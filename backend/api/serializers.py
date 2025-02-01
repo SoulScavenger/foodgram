@@ -35,7 +35,11 @@ class GetUserSerializer(serializers.ModelSerializer):
         )
 
     def get_subscribe_status(self, author):
-        return False
+        user = self.context.get('request').user
+        return (
+            user.is_authenticated
+            and user.followings.filter(author=author).exists()
+        )
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -76,9 +80,6 @@ class AvatarSerializer(serializers.ModelSerializer):
 class GetSubscribeSerializer(GetUserSerializer):
     """Сериализатор получения подписок."""
 
-    is_subscribed = serializers.SerializerMethodField(
-        method_name='get_subscribe_status'
-    )
     recipes = serializers.SerializerMethodField(
         method_name='get_recipes'
     )
@@ -91,20 +92,15 @@ class GetSubscribeSerializer(GetUserSerializer):
         model = User
         fields = GetUserSerializer.Meta.fields + ('recipes', 'recipes_count')
 
-    def get_subscribe_status(self, author):
-        user = self.context.get('request').user
-        return user.followings.filter(author=author).exists()
-
     def get_recipes(self, author):
         recipes = author.recipes.all()
         request = self.context.get('request')
         if 'recipes_limit' in self.context.get('request').GET:
             recipes_limit = self.context.get('request').GET['recipes_limit']
-            try:
-                recipes_limit = int(recipes_limit)
-                recipes = recipes[:int(recipes_limit)]
-            except ValueError as err:
-                print(f'Невозможно преобразовать в int. Описание: {err}')
+            if not recipes_limit.isdigit():
+                serializers.ValidationError('limit должен быть типа int.')
+            recipes_limit = int(recipes_limit)
+            recipes = recipes[:int(recipes_limit)]
         return GetShortRecipeSerializer(
             recipes,
             many=True,
@@ -129,9 +125,10 @@ class CreateSubscribeSerializer(serializers.ModelSerializer):
         if follower == following:
             raise serializers.ValidationError('Нельзя подписаться на себя...')
 
-        is_subscribe_in_table = Subscribe.objects.select_related(
-            'user', 'author'
-        ).filter(user=follower, author=following).exists()
+        is_subscribe_in_table = Subscribe.objects.filter(
+            user=follower,
+            author=following
+        ).exists()
 
         if is_subscribe_in_table:
             raise serializers.ValidationError('Подписка уже оформлена...')
@@ -212,6 +209,11 @@ class CreateRecipeIngredientSerializer(serializers.ModelSerializer):
         model = RecipeIngredient
         fields = ('id', 'amount')
 
+    def validate_amount(self, value):
+        if not value:
+            serializers.ValidationError('amount не может быть пустым.')
+        return value
+
 
 # Сериализаторы Рецепта.
 class GetShortRecipeSerializer(serializers.ModelSerializer):
@@ -264,14 +266,14 @@ class GetRecipeSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return (
             request and request.user.is_authenticated
-            and request.user.favorite_recipes.all().exists()
+            and request.user.favorite_recipes.exists()
         )
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         return (
             request and request.user.is_authenticated
-            and request.user.cart_recipes.all().exists()
+            and request.user.cart_recipes.exists()
         )
 
 
@@ -310,7 +312,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
             )
 
         ingredients_length = len(ingredients)
-        if ingredients_length == 0:
+        if not ingredients_length:
             raise serializers.ValidationError('Не может быть пустым.')
         ingredients_id = [
             ingredient['ingredient'].id for ingredient in ingredients
@@ -319,6 +321,14 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Данные должны быть уникальными.'
             )
+        tags_length = len(tags)
+        if not tags_length:
+            raise serializers.ValidationError('Не может быть пустым.')
+        if len(set(tags)) != tags_length:
+            raise serializers.ValidationError(
+                'Данные должны быть уникальными.'
+            )
+
         return data
 
     def validate_image(self, value):
@@ -328,32 +338,10 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
             'Не может быть пустым.'
         )
 
-    def validate_tags(self, value):
-        value_length = len(value)
-        if not value_length:
-            raise serializers.ValidationError('Не может быть пустым.')
-        if len(set(value)) != value_length:
-            raise serializers.ValidationError(
-                'Данные должны быть уникальными.'
-            )
-        return value
-
-    def create(self, validated_data):
-        tags = validated_data.pop('tags')
-        ingredients = validated_data.pop('recipe_ingredients')
-        recipe = Recipe.objects.create(**validated_data)
-        RecipeTag.objects.bulk_create(
+    def add_ingredients(self, model, recipe, ingredients):
+        model.objects.bulk_create(
             (
-                RecipeTag(
-                    recipe=recipe,
-                    tag=tag,
-                )
-                for tag in tags
-            )
-        )
-        RecipeIngredient.objects.bulk_create(
-            (
-                RecipeIngredient(
+                model(
                     recipe=recipe,
                     ingredient=ingredient['ingredient'],
                     amount=ingredient['amount']
@@ -361,7 +349,14 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
                 for ingredient in ingredients
             )
         )
-        return recipe
+
+    def create(self, validated_data):
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('recipe_ingredients')
+        recipe = Recipe.objects.create(**validated_data)
+        self.add_ingredients(RecipeIngredient, recipe, ingredients)
+        recipe.tags.set(tags)
+        return super().create(validated_data)
 
     def update(self, instance, validated_data):
         tags = validated_data.pop('tags')
@@ -370,28 +365,10 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         recipe_tags = RecipeTag.objects.filter(recipe=instance)
         recipe_tags.delete()
         recipe_ingredients.delete()
+        instance.tags.set(tags)
+        self.add_ingredients(RecipeIngredient, instance, ingredients)
 
-        RecipeTag.objects.bulk_create(
-            (
-                RecipeTag(
-                    recipe=instance,
-                    tag=tag,
-                )
-                for tag in tags
-            )
-        )
-        RecipeIngredient.objects.bulk_create(
-            (
-                RecipeIngredient(
-                    recipe=instance,
-                    ingredient=ingredient['ingredient'],
-                    amount=ingredient['amount']
-                )
-                for ingredient in ingredients
-            )
-        )
-
-        return instance
+        return super().update(instance, validated_data)
 
     def to_representation(self, instance):
         return GetRecipeSerializer(
@@ -406,7 +383,7 @@ class FavoriteRecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FavoriteRecipe
-        fields = '__all__'
+        fields = ('user', 'recipe')
 
     def validate(self, data):
         is_favorite = FavoriteRecipe.objects.filter(**data).exists()
@@ -430,7 +407,7 @@ class ShoppingCartRecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShoppingCartRecipe
-        fields = '__all__'
+        fields = ('user', 'recipe')
 
     def validate(self, data):
         is_in_cart = ShoppingCartRecipe.objects.filter(**data).exists()

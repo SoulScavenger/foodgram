@@ -26,6 +26,7 @@ class BaseFavoriteShopping(admin.ModelAdmin):
 
 class BaseRecipeIngredientTagInline(admin.StackedInline):
     """Базовый класс для строчного представления."""
+
     extra = 0
     min_num = 1
 
@@ -155,6 +156,7 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
 @admin.register(RecipeTag)
 class RecipeTagAdmin(admin.ModelAdmin):
     """Админка Рецепта/Тега."""
+
     list_display = (
         'recipe',
         'tag',
