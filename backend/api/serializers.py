@@ -97,10 +97,8 @@ class GetSubscribeSerializer(GetUserSerializer):
         request = self.context.get('request')
         if 'recipes_limit' in self.context.get('request').GET:
             recipes_limit = self.context.get('request').GET['recipes_limit']
-            if not recipes_limit.isdigit():
-                serializers.ValidationError('limit должен быть типа int.')
-            recipes_limit = int(recipes_limit)
-            recipes = recipes[:int(recipes_limit)]
+            if recipes_limit.isdigit():
+                recipes = recipes[:int(recipes_limit)]
         return GetShortRecipeSerializer(
             recipes,
             many=True,
