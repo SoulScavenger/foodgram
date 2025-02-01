@@ -9,7 +9,7 @@ from recipes.models import Ingredient, Recipe
 
 
 class IngredientFilterSet(FilterSet):
-    """Фильтр для Ингредиентов"""
+    """Фильтр для Ингредиентов."""
 
     name = CharFilter(lookup_expr='istartswith')
 
